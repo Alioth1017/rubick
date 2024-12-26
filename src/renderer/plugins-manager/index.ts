@@ -5,10 +5,13 @@ import appSearch from '@/core/app-search';
 import { PluginHandler } from '@/core';
 import path from 'path';
 import commonConst from '@/common/utils/commonConst';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
 import searchManager from './search';
 import optionsManager from './options';
-import { PLUGIN_INSTALL_DIR as baseDir } from '@/common/constans/renderer';
+import {
+  PLUGIN_INSTALL_DIR as baseDir,
+  PLUGIN_HISTORY,
+} from '@/common/constans/renderer';
 import { message } from 'ant-design-vue';
 
 const createPluginManager = (): any => {
@@ -28,16 +31,22 @@ const createPluginManager = (): any => {
   const appList: any = ref([]);
 
   const initPlugins = async () => {
+    initPluginHistory();
     appList.value = await appSearch(nativeImage);
     initLocalStartPlugin();
+  };
+
+  const initPluginHistory = () => {
+    const result = window.rubick.db.get(PLUGIN_HISTORY) || {};
+    if (result && result.data) {
+      state.pluginHistory = result.data;
+    }
   };
 
   const initLocalStartPlugin = () => {
     const result = ipcRenderer.sendSync('msg-trigger', {
       type: 'dbGet',
-      data: {
-        id: 'rubick-local-start-app',
-      },
+      data: { id: PLUGIN_HISTORY },
     });
     if (result && result.value) {
       appList.value.push(...result.value);
@@ -68,14 +77,18 @@ const createPluginManager = (): any => {
   };
 
   const openPlugin = async (plugin, option) => {
+    ipcRenderer.send('msg-trigger', {
+      type: 'removePlugin',
+    });
+    window.initRubick();
     if (plugin.pluginType === 'ui' || plugin.pluginType === 'system') {
       if (state.currentPlugin && state.currentPlugin.name === plugin.name) {
+        window.rubick.showMainWindow();
         return;
       }
       await loadPlugin(plugin);
-      ipcRenderer.sendSync('msg-trigger', {
-        type: 'openPlugin',
-        data: JSON.parse(
+      window.rubick.openPlugin(
+        JSON.parse(
           JSON.stringify({
             ...plugin,
             ext: plugin.ext || {
@@ -84,33 +97,65 @@ const createPluginManager = (): any => {
               payload: null,
             },
           })
-        ),
-      });
+        )
+      );
     }
     if (plugin.pluginType === 'app') {
       try {
-        execSync(plugin.action);
+        exec(plugin.action);
       } catch (e) {
         message.error('启动应用出错，请确保启动应用存在！');
       }
     }
-    window.initRubick();
     changePluginHistory({
       ...plugin,
       ...option,
+      originName: plugin.name,
     });
   };
 
   const changePluginHistory = (plugin) => {
-    if (state.pluginHistory.length >= 8) {
-      state.pluginHistory.pop();
+    const unpin = state.pluginHistory.filter((plugin) => !plugin.pin);
+    const pin = state.pluginHistory.filter((plugin) => plugin.pin);
+    const isPin = state.pluginHistory.find((p) => p.name === plugin.name)?.pin;
+    if (isPin) {
+      pin.forEach((p, index) => {
+        if (p.name === plugin.name) {
+          plugin = pin.splice(index, 1)[0];
+        }
+      });
+      pin.unshift(plugin);
+    } else {
+      unpin.forEach((p, index) => {
+        if (p.name === plugin.name) {
+          unpin.splice(index, 1);
+        }
+      });
+      unpin.unshift(plugin);
     }
-    state.pluginHistory.forEach((p, index) => {
-      if (p.name === plugin.name) {
-        state.pluginHistory.splice(index, 1);
-      }
+    if (state.pluginHistory.length > 8) {
+      unpin.pop();
+    }
+    state.pluginHistory = [...pin, ...unpin];
+    const result = window.rubick.db.get(PLUGIN_HISTORY) || {};
+    window.rubick.db.put({
+      _id: PLUGIN_HISTORY,
+      _rev: result._rev,
+      data: JSON.parse(JSON.stringify(state.pluginHistory)),
     });
-    state.pluginHistory.unshift(plugin);
+  };
+
+  const setPluginHistory = (plugins) => {
+    state.pluginHistory = plugins;
+    const unpin = state.pluginHistory.filter((plugin) => !plugin.pin);
+    const pin = state.pluginHistory.filter((plugin) => plugin.pin);
+    state.pluginHistory = [...pin, ...unpin];
+    const result = window.rubick.db.get(PLUGIN_HISTORY) || {};
+    window.rubick.db.put({
+      _id: PLUGIN_HISTORY,
+      _rev: result._rev,
+      data: JSON.parse(JSON.stringify(state.pluginHistory)),
+    });
   };
 
   const { searchValue, onSearch, setSearchValue, placeholder } =
@@ -118,6 +163,7 @@ const createPluginManager = (): any => {
   const {
     options,
     searchFocus,
+    setOptionsRef,
     clipboardFile,
     clearClipboardFile,
     readClipboardContent,
@@ -169,11 +215,20 @@ const createPluginManager = (): any => {
   window.initRubick = () => {
     state.currentPlugin = {};
     setSearchValue('');
+    setOptionsRef([]);
     window.setSubInput({ placeholder: '' });
   };
 
   window.pluginLoaded = () => {
     state.pluginLoading = false;
+  };
+
+  window.searchFocus = (args, strict) => {
+    ipcRenderer.send('msg-trigger', {
+      type: 'removePlugin',
+    });
+    window.initRubick();
+    searchFocus(args, strict);
   };
 
   return {
@@ -193,6 +248,8 @@ const createPluginManager = (): any => {
     clipboardFile,
     clearClipboardFile,
     readClipboardContent,
+    setPluginHistory,
+    changePluginHistory,
   };
 };
 

@@ -9,9 +9,6 @@ module.exports = {
         '@': path.join(__dirname, './src'),
       },
     },
-    externals: {
-      'extract-file-icon': 'commonjs extract-file-icon',
-    },
   },
   pages: {
     index: {
@@ -27,6 +24,7 @@ module.exports = {
       externals: [
         'pouchdb',
         'extract-file-icon',
+        'npm',
         'electron-screenshots',
         '@electron/remote',
       ],
@@ -35,6 +33,10 @@ module.exports = {
         productName: 'rubick',
         appId: 'com.muwoo.rubick',
         compression: 'maximum',
+        // afterPack: './release.js',
+        // afterAllArtifactBuild: () => {
+        //   return ['./build/app.asar.gz'];
+        // },
         directories: {
           output: 'build',
         },

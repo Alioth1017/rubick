@@ -14,13 +14,19 @@ import { screenCapture } from '@/core';
 import plist from 'plist';
 import ks from 'node-key-sender';
 
-import { DECODE_KEY } from '@/common/constans/main';
+import {
+  DECODE_KEY,
+  PLUGIN_INSTALL_DIR as baseDir,
+} from '@/common/constans/main';
 import getCopyFiles from '@/common/utils/getCopyFiles';
+import common from '@/common/utils/commonConst';
 
 import mainInstance from '../index';
 import { runner, detach } from '../browsers';
 import DBInstance from './db';
 import getWinPosition from './getWinPosition';
+import path from 'path';
+import commonConst from '@/common/utils/commonConst';
 
 const runnerInstance = runner();
 const detachInstance = detach();
@@ -77,8 +83,34 @@ class API extends DBInstance {
   }
 
   public openPlugin({ data: plugin }, window) {
+    if (plugin.platform && !plugin.platform.includes(process.platform)) {
+      return new Notification({
+        title: `插件不支持当前 ${process.platform} 系统`,
+        body: `插件仅支持 ${plugin.platform.join(',')}`,
+        icon: plugin.logo,
+      }).show();
+    }
     window.setSize(window.getSize()[0], 60);
     this.removePlugin(null, window);
+    // 模板文件
+    if (!plugin.main) {
+      plugin.tplPath = common.dev()
+        ? 'http://localhost:8083/#/'
+        : `file://${__static}/tpl/index.html`;
+    }
+    if (plugin.name === 'rubick-system-feature') {
+      plugin.logo = plugin.logo || `file://${__static}/logo.png`;
+      plugin.indexPath = commonConst.dev()
+        ? 'http://localhost:8081/#/'
+        : `file://${__static}/feature/index.html`;
+    } else if (!plugin.indexPath) {
+      const pluginPath = path.resolve(baseDir, 'node_modules', plugin.name);
+      plugin.indexPath = `file://${path.join(
+        pluginPath,
+        './',
+        plugin.main || ''
+      )}`;
+    }
     runnerInstance.init(plugin, window);
     this.currentPlugin = plugin;
     window.webContents.executeJavaScript(
@@ -96,8 +128,8 @@ class API extends DBInstance {
   }
 
   public removePlugin(e, window) {
-    this.currentPlugin = null;
     runnerInstance.removeView(window);
+    this.currentPlugin = null;
   }
 
   public openPluginDevTools() {
@@ -116,11 +148,24 @@ class API extends DBInstance {
     return dialog.showOpenDialogSync(window, data);
   }
 
+  public showSaveDialog({ data }, window) {
+    return dialog.showSaveDialogSync(window, data);
+  }
+
   public setExpendHeight({ data: height }, window: BrowserWindow, e) {
     const originWindow = this.getCurrentWindow(window, e);
     if (!originWindow) return;
     const targetHeight = height;
     originWindow.setSize(originWindow.getSize()[0], targetHeight);
+    const screenPoint = screen.getCursorScreenPoint();
+    const display = screen.getDisplayNearestPoint(screenPoint);
+    const position =
+      originWindow.getPosition()[1] + targetHeight > display.bounds.height
+        ? height - 60
+        : 0;
+    originWindow.webContents.executeJavaScript(
+      `window.setPosition && typeof window.setPosition === "function" && window.setPosition(${position})`
+    );
   }
 
   public setSubInput({ data }, window, e) {
@@ -155,6 +200,7 @@ class API extends DBInstance {
         value: data.text,
       })})`
     );
+    this.sendSubInputChangeEvent({ data });
   }
 
   public getPath({ data }) {
@@ -165,11 +211,10 @@ class API extends DBInstance {
     if (!Notification.isSupported()) return;
     'string' != typeof body && (body = String(body));
     const plugin = this.currentPlugin;
-    if (!plugin) return;
     const notify = new Notification({
-      title: plugin.pluginName,
+      title: plugin ? plugin.pluginName : null,
       body,
-      icon: plugin.logo,
+      icon: plugin ? plugin.logo : null,
     });
     notify.show();
   }
@@ -196,7 +241,7 @@ class API extends DBInstance {
   }
 
   public getFeatures() {
-    return this.currentPlugin.features;
+    return this.currentPlugin?.features;
   }
 
   public setFeature({ data }, window) {
@@ -290,6 +335,7 @@ class API extends DBInstance {
     shell.showItemInFolder(data.path);
     return true;
   }
+
   public async getFileIcon({ data }) {
     const nativeImage = await app.getFileIcon(data.path, { size: 'normal' });
     return nativeImage.toDataURL();

@@ -3,7 +3,6 @@ import {
   nativeTheme,
   BrowserWindow,
   BrowserView,
-  screen,
   ipcMain,
   app,
   Notification,
@@ -16,11 +15,21 @@ const registerHotKey = (mainWindow: BrowserWindow): void => {
   // 设置开机启动
   const setAutoLogin = async () => {
     const config = await localConfig.getConfig();
-    app.setLoginItemSettings({
-      openAtLogin: config.perf.common.start,
-      openAsHidden: true,
+    if (app.getLoginItemSettings().openAtLogin !== config.perf.common.start) {
+      app.setLoginItemSettings({
+        openAtLogin: config.perf.common.start,
+        openAsHidden: true,
+      });
+    }
+  };
+
+  const setTheme = async () => {
+    mainWindow.webContents.executeJavaScript(`window.rubick.changeTheme()`);
+    mainWindow.getBrowserViews().forEach((view: BrowserView) => {
+      view.webContents.executeJavaScript(`window.rubick.changeTheme()`);
     });
   };
+
   // 设置暗黑模式
   const setDarkMode = async () => {
     const config = await localConfig.getConfig();
@@ -51,6 +60,7 @@ const registerHotKey = (mainWindow: BrowserWindow): void => {
   const init = async () => {
     await setAutoLogin();
     await setDarkMode();
+    await setTheme();
     const config = await localConfig.getConfig();
     globalShortcut.unregisterAll();
     // 注册偏好快捷键
@@ -77,10 +87,6 @@ const registerHotKey = (mainWindow: BrowserWindow): void => {
           }).show();
       });
     });
-
-    // globalShortcut.register(config.perf.shortCut.separate, () => {
-    //
-    // });
 
     globalShortcut.register(config.perf.shortCut.quit, () => {
       // mainWindow.webContents.send('init-rubick');

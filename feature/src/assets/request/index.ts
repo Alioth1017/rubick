@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-let baseURL = 'https://gitcode.net/rubickcenter/rubick-database/-/raw/master';
+let baseURL = 'https://gitee.com/monkeyWang/rubickdatabase/raw/master';
 let access_token = '';
 
 try {
@@ -12,8 +12,9 @@ try {
 }
 
 const instance = axios.create({
+  timeout: 4000,
   baseURL:
-    baseURL || 'https://gitcode.net/rubickcenter/rubick-database/-/raw/master',
+    baseURL || 'https://gitee.com/monkeyWang/rubickdatabase/raw/master',
 });
 
 export default {
@@ -22,9 +23,10 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
+    console.log('total plugsin', res);
     return res.data;
   },
 
@@ -33,7 +35,7 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
     return res.data;
@@ -44,7 +46,7 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
     return res.data;
@@ -54,14 +56,14 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
     return res.data;
   },
 
   async getPluginDetail(url: string) {
-    const res = await axios.get(url);
+    const res = await instance.get(url);
     return res.data;
   },
 
@@ -70,7 +72,7 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
     return res.data;
@@ -80,7 +82,7 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
     return res.data;
@@ -90,7 +92,7 @@ export default {
     if (access_token) {
       targetPath = `${encodeURIComponent(
         targetPath
-      )}/raw?access_token=${access_token}&ref=master`;
+      )}?access_token=${access_token}&ref=master`;
     }
     const res = await instance.get(targetPath);
     return res.data;
