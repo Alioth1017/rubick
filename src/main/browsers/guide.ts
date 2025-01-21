@@ -1,5 +1,10 @@
 import { BrowserWindow, ipcMain, nativeTheme, screen } from 'electron';
 import path from 'path';
+import {
+  GUIDE_WIDTH,
+  WINDOW_MIN_HEIGHT,
+  GUIDE_HEIGHT,
+} from '@/common/constans/common';
 
 const getWindowPos = (width, height) => {
   const screenPoint = screen.getCursorScreenPoint();
@@ -39,8 +44,9 @@ export default () => {
       enableLargerThanScreen: true,
       x,
       y,
-      width: 800,
-      height: 600,
+      width: GUIDE_WIDTH,
+      height: GUIDE_HEIGHT,
+      minHeight: WINDOW_MIN_HEIGHT,
       webPreferences: {
         webSecurity: false,
         backgroundThrottling: false,
@@ -48,6 +54,7 @@ export default () => {
         webviewTag: true,
         devTools: true,
         nodeIntegration: true,
+        spellcheck: false,
       },
     });
     if (process.env.WEBPACK_DEV_SERVER_URL) {

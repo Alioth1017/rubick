@@ -3,6 +3,11 @@ import path from 'path';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 // import versonHandler from '../common/versionHandler';
 import localConfig from '@/main/common/initLocalConfig';
+import {
+  WINDOW_HEIGHT,
+  WINDOW_MIN_HEIGHT,
+  WINDOW_WIDTH,
+} from '@/common/constans/common';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('@electron/remote/main').initialize();
 
@@ -17,10 +22,11 @@ export default () => {
 
   const createWindow = async () => {
     win = new BrowserWindow({
-      height: 60,
+      height: WINDOW_HEIGHT,
+      minHeight: WINDOW_MIN_HEIGHT,
       useContentSize: true,
       resizable: true,
-      width: 800,
+      width: WINDOW_WIDTH,
       frame: false,
       title: '拉比克',
       show: false,
@@ -33,6 +39,7 @@ export default () => {
         webviewTag: true,
         nodeIntegration: true,
         preload: path.join(__static, 'preload.js'),
+        spellcheck: false,
       },
     });
     if (process.env.WEBPACK_DEV_SERVER_URL) {

@@ -41,7 +41,7 @@ class AdapterHandler {
     }
     this.baseDir = options.baseDir;
 
-    let register = options.registry || 'https://registry.npm.taobao.org';
+    let register = options.registry || 'https://registry.npmmirror.com';
 
     try {
       const dbdata = ipcRenderer.sendSync('msg-trigger', {
@@ -60,7 +60,7 @@ class AdapterHandler {
     const packageJSON = JSON.parse(
       fs.readFileSync(`${this.baseDir}/package.json`, 'utf-8')
     );
-    const registryUrl = `https://registry.npm.taobao.org/${name}`;
+    const registryUrl = `https://registry.npmmirror.com/${name}`;
 
     // 从npm源中获取依赖包的最新版本
     try {
@@ -157,17 +157,23 @@ class AdapterHandler {
    */
   private async execCommand(cmd: string, modules: string[]): Promise<string> {
     return new Promise((resolve: any, reject: any) => {
-      const args: string[] = [cmd]
-        .concat(
-          cmd !== 'uninstall' ? modules.map((m) => `${m}@latest`) : modules
-        )
-        .concat('--color=always')
-        .concat('--save')
-        .concat(`--registry=${this.registry}`);
+      let args: string[] = [cmd].concat(
+        cmd !== 'uninstall' && cmd !== 'link'
+          ? modules.map((m) => `${m}@latest`)
+          : modules
+      );
+      if (cmd !== 'link') {
+        args = args
+          .concat('--color=always')
+          .concat('--save')
+          .concat(`--registry=${this.registry}`);
+      }
 
       const npm = spawn('npm', args, {
         cwd: this.baseDir,
       });
+
+      console.log(args);
 
       let output = '';
       npm.stdout

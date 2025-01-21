@@ -102,15 +102,15 @@ const netStep = () => {
   }
   .info {
     padding-top: 42px;
-    margin-right: 178px;
+    margin-left: 84px;
     box-sizing: border-box;
-    width: 100%;
-    text-align: right;
+    text-align: left;
     position: relative;
+    align-self: flex-start;
     color: @text-color;
     .top-icon {
       position: absolute;
-      right: 0;
+      left: 0;
       top: 0;
       user-select: none;
       width: 1em;
@@ -147,9 +147,11 @@ const netStep = () => {
     background: @primary-color;
     color: #fff;
     display: flex;
-    aligin-items: center;
+    align-items: center;
     justify-content: center;
     border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
   }
 }
 

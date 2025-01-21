@@ -3,6 +3,11 @@ import path from 'path';
 import commonConst from '../../common/utils/commonConst';
 import { PLUGIN_INSTALL_DIR as baseDir } from '@/common/constans/main';
 import localConfig from '@/main/common/initLocalConfig';
+import {
+  WINDOW_HEIGHT,
+  WINDOW_PLUGIN_HEIGHT,
+  WINDOW_WIDTH,
+} from '@/common/constans/common';
 
 const getRelativePath = (indexPath) => {
   return commonConst.windows()
@@ -57,9 +62,14 @@ export default () => {
   const viewReadyFn = async (window, { pluginSetting, ext }) => {
     if (!view) return;
     const height = pluginSetting && pluginSetting.height;
-    window.setSize(800, height || 660);
-    view.setBounds({ x: 0, y: 60, width: 800, height: height || 600 });
-    view.setAutoResize({ width: true });
+    window.setSize(WINDOW_WIDTH, height || WINDOW_PLUGIN_HEIGHT);
+    view.setBounds({
+      x: 0,
+      y: WINDOW_HEIGHT,
+      width: WINDOW_WIDTH,
+      height: height || WINDOW_PLUGIN_HEIGHT - WINDOW_HEIGHT,
+    });
+    view.setAutoResize({ width: true, height: true });
     executeHooks('PluginEnter', ext);
     executeHooks('PluginReady', ext);
     const config = await localConfig.getConfig();
@@ -73,23 +83,31 @@ export default () => {
 
   const init = (plugin, window: BrowserWindow) => {
     if (view === null || view === undefined) {
-      if (viewInstance.getView(plugin.name) && !commonConst.dev()) {
-        view = viewInstance.getView(plugin.name).view;
-        window.setBrowserView(view);
-        view.inited = true;
-        viewReadyFn(window, plugin);
-      } else {
-        createView(plugin, window);
-        viewInstance.addView(plugin.name, view);
-      }
+      createView(plugin, window);
+      // if (viewInstance.getView(plugin.name) && !commonConst.dev()) {
+      //   view = viewInstance.getView(plugin.name).view;
+      //   window.setBrowserView(view);
+      //   view.inited = true;
+      //   viewReadyFn(window, plugin);
+      // } else {
+      //   createView(plugin, window);
+      //   viewInstance.addView(plugin.name, view);
+      // }
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       require('@electron/remote/main').enable(view.webContents);
     }
   };
 
   const createView = (plugin, window: BrowserWindow) => {
-    const { tplPath, indexPath, development, name, main, pluginSetting, ext } =
-      plugin;
+    const {
+      tplPath,
+      indexPath,
+      development,
+      name,
+      main = 'index.html',
+      pluginSetting,
+      ext,
+    } = plugin;
     let pluginIndexPath = tplPath || indexPath;
     let preloadPath;
     let darkMode;
@@ -128,6 +146,7 @@ export default () => {
           standard: 'system-ui',
           serif: 'system-ui',
         },
+        spellcheck: false,
       },
     });
     window.setBrowserView(view);
@@ -156,24 +175,29 @@ export default () => {
 
   const removeView = (window: BrowserWindow) => {
     if (!view) return;
-    window.removeBrowserView(view);
-    window.setSize(800, 60);
     executeHooks('PluginOut', null);
-    window.webContents.executeJavaScript(`window.initRubick()`);
-    view = undefined;
+    setTimeout(() => {
+      window.removeBrowserView(view);
+      if (!view.inDetach) {
+        window.setBrowserView(null);
+        view.webContents?.destroy();
+      }
+      window.webContents?.executeJavaScript(`window.initRubick()`);
+      view = undefined;
+    }, 0);
   };
 
   const getView = () => view;
 
   const executeHooks = (hook, data) => {
     if (!view) return;
-    const evalJs = `if(window.rubick && window.rubick.hooks && typeof window.rubick.hooks.on${hook} === 'function' ) {     
-          try { 
+    const evalJs = `if(window.rubick && window.rubick.hooks && typeof window.rubick.hooks.on${hook} === 'function' ) {
+          try {
             window.rubick.hooks.on${hook}(${data ? JSON.stringify(data) : ''});
-          } catch(e) {} 
+          } catch(e) {}
         }
       `;
-    view.webContents.executeJavaScript(evalJs);
+    view.webContents?.executeJavaScript(evalJs);
   };
 
   return {
